@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:java="http://www.mulesoft.org/schema/mule/java" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+	<http:listener-config name="HTTP_Listener_config1" doc:name="HTTP Listener config" doc:id="d61ad57a-f75a-4896-914d-1357b12e806f" >
+		<http:listener-connection host="0.0.0.0" port="8086" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="40824308-619e-4bdf-96e6-8edbcac9b012" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Rounak9797@" database="orderinventories" />
+	</db:config>
+	<vm:config name="VM_Config" doc:name="VM Config" doc:id="0c2a069b-7bbd-482f-9113-b6306ef7904b" >
+		<vm:queues >
+			<vm:queue queueName="vmconnecter" />
+		</vm:queues>
+	</vm:config>
+	<flow name="muleconnecterdemoFlow" doc:id="3a4aae77-a803-4356-9d45-3ad9fb8ffa51" >
+		<http:listener doc:name="Listener" doc:id="dbf0db97-19e5-4531-a5e9-90818ce81d83" config-ref="HTTP_Listener_config1" path="/fileconnecter"/>
+		<logger level="INFO" doc:name="Logger" doc:id="f905267e-b17b-4e0f-85d2-f9fc904eb6ed" />
+		<file:read doc:name="Read" doc:id="266892f7-e5e4-49ae-9c55-185ada3492d2" path="E:\Anypoint Workspace\muleconnecterdemo\src\main\resources\Input\ExportCSV.csv"/>
+		<ee:transform doc:name="Transform Message" doc:id="57066a32-49cb-4fd0-bdf6-d2662f673c2a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload filter($.age > 35) map ((row) -> {
+	Id: row.employeeId as Number,
+	Name: row.name,
+	Age: row.age as Number,
+	Department: row.department
+})]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write" doc:id="eb3c102e-5040-4e72-acc6-fb2e8021d288" path="E:\Anypoint Workspace\muleconnecterdemo\src\main\resources\Output\output.csv"/>
+	</flow>
+	<flow name="muleconnecterdemoFlow1" doc:id="2e42e116-6df3-4df8-ae24-c548c6beaaf8" >
+		<http:listener doc:name="Listener" doc:id="c1012c19-9c99-45c1-956a-2a213050a2c8" config-ref="HTTP_Listener_config1" path="/javaconnecter"/>
+		<logger level="INFO" doc:name="Logger" doc:id="ca84668a-5d29-44c2-9cf5-5bf902206921" />
+		<java:invoke-static method="getResp(java.lang.String)" doc:name="Invoke static" doc:id="ccf1653a-6427-4ccc-8da7-d652bca3a886" class="muleconnecterdemo.DemoClass">
+			<java:args ><![CDATA[#[{str: 'from mule'}]]]></java:args>
+		</java:invoke-static>
+	</flow>
+	<flow name="muleconnecterdemoFlow2" doc:id="d9a2281b-9e4e-4e75-949f-2724bc2d84b1" >
+		<http:listener doc:name="Listener" doc:id="992a4d94-dcb6-43ca-90a7-bdb475d137ad" config-ref="HTTP_Listener_config1" path="/databaseconnecter"/>
+		<logger level="INFO" doc:name="Logger" doc:id="0a89d3aa-adb1-4cab-88f1-c381ffc27277" />
+		<db:select doc:name="Select" doc:id="a1f1154e-3d0d-4703-b880-117d5e567070" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM users;]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="e284da79-b4e7-4221-ac39-96a25300076f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="muleconnecterdemoFlow4" doc:id="853594d6-9626-4292-a2db-6976e7757dfd" >
+		<http:listener doc:name="Listener" doc:id="78f9f8f8-6e80-4435-bbcf-04ca3f731c74" config-ref="HTTP_Listener_config1" path="/vmconnecter"/>
+		<logger level="INFO" doc:name="Logger" doc:id="0913e6be-2032-4752-afc2-780ec9f8822c" />
+		<vm:publish doc:name="Publish" doc:id="1206e4a2-a3e4-46a9-9435-3ebe928c0dea" config-ref="VM_Config" queueName="vmconnecter"/>
+		<logger level="INFO" doc:name="Logger" doc:id="9950fd4e-3312-4445-ab00-d70275716ade" />
+	</flow>
+	<flow name="muleconnecterdemoFlow3" doc:id="9b9774d4-0e28-422b-8be2-d4423c254ee0" >
+		<vm:listener doc:name="Listener" doc:id="936578de-5f8b-4bbb-b0ce-f6d7247fe1bc" config-ref="VM_Config" queueName="vmconnecter"/>
+		<logger level="INFO" doc:name="Logger" doc:id="cec3b41a-c6e7-4697-9203-faf881ff145b" />
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="50790d42-e898-4329-9233-3fdd71d29772" />
+	</flow>
+	<flow name="ForEachTest" doc:id="31f80465-5ade-42f2-964b-ed42e9e7f0c4" >
+		<http:listener doc:name="Listener" doc:id="534449d7-3226-4a01-911a-53fb8f635a9b" config-ref="HTTP_Listener_config1" path="/for-each"/>
+		<logger level="INFO" doc:name="Logger" doc:id="accdbb13-a52f-49f9-968c-26faa321257a" message="#[payload]"/>
+		<foreach doc:name="For Each" doc:id="2ef9da51-6c99-4bbd-81f5-971759d5606a" >
+			<logger level="INFO" doc:name="Logger" doc:id="6dc77316-ccf9-4280-87b3-6c5f64f0b734" message="#[payload]"/>
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="8ccf3ceb-e9b0-4788-aa1f-15193a5dbbb1" variableName="a"/>
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="8366d7ab-bbf0-4cde-8c2c-f38c96cb8b72" variableName="b"/>
+		</foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="57a1252b-4fdb-4771-91fe-05e02166c85a" message="#[payload]"/>
+	</flow>
+</mule>
